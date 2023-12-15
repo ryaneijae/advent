@@ -13,11 +13,6 @@ pipe_map = {
 }
 
 
-def intersection(a, b):
-    c = [value for value in a if value in b]
-    return c
-
-
 class Maze:
     def __init__(self, filepath):
         maze = []
@@ -29,8 +24,11 @@ class Maze:
         self.maze = np.array(maze)
         self.row_len, self.col_len = self.maze.shape
 
-    def _print_maze(self, arr):
-        print(np.matrix(arr))
+        self._print_maze()
+
+    def _print_maze(self):
+        for row in self.maze:
+            print(row)
         print(f'({self.row_len} x {self.col_len})')
 
     def find_start(self):
@@ -125,71 +123,54 @@ class Maze:
                     last_row, last_col, last_dir
                     )
 
-    def _surrounded(self, row, col):
-        if row <= 0 or col <= 0 or row >= self.row_len - 1 or col >= self.col_len - 1:
-            return False
-        
-        checking = [(x, col) for x in range(row)]
-        if not intersection(checking, self.just_pipe): 
-            return False
-        
-        checking = [(x, col) for x in range(row + 1, self.row_len)]
-        if not intersection(checking, self.just_pipe):
-            return False
-        
-        checking = [(row, x) for x in range(col)]
-        if not intersection(checking, self.just_pipe):
-            return False
-        
-        checking = [(row, x) for x in range(col + 1, self.col_len)]
-        if not intersection(checking, self.just_pipe):
-            return False
-        
+    def part1(self):
+        self.find_pipes()
+        return len(self.pipes) // 2
+
+    def replace_non_pipe(self):
+        for i in range(self.row_len):
+            for j in range(self.col_len):
+                if (i, j) not in self.just_pipe: self.maze[i, j] = '.'
+
+    def is_inside(self, row, col):
+        if row <= 0 or col <= 0: return False
+        if row >= self.row_len - 1 or col >= self.col_len - 1: return False
+        to_the_left = self.maze[row, 0:col]
+        n = 0
+        s = 0
+        for each in to_the_left:
+            current = pipe_map[each]
+            if current['n']: n += 1
+            if current['s']: s += 1
+
+        if min(n, s) % 2 == 0: return False
         return True
 
-    def _count(self, row, col):
-        checking = []
+    def count_inside_pipe(self):
+        count = 0
         for i in range(self.row_len):
-            checking.append((i, col))
+            for j in range(self.col_len):
+                if self.maze[i, j] == '.':
+                    if self.is_inside(i, j):
+                        count += 1
+        return count                    
 
-        for i in range(self.col_len):
-            checking.append((row, i))
-
-        checking.remove((row, col))
-        checking.remove((row, col))
-        x = intersection(checking, self.just_pipe)
-        print(row, col, x)
-        print(len(x))
-        return len(x)
 
     def part2(self):
         self.find_pipes()
-        
-        self.new_maze = self.maze.copy()
-        
         self.just_pipe = []
-        
+
         for r, c, d in self.pipes:
             self.just_pipe.append((r, c))
-        
-        for row in range(self.row_len):
-            for col in range(self.col_len):
-                if (row, col) not in self.just_pipe:
-                    if self._surrounded(row, col):
-                        self.new_maze[row, col] = self._count(row, col)
-                    else:
-                        self.new_maze[row, col] = '.'
 
-        
-
-        self._print_maze(self.new_maze)
-        
-
+        self.replace_non_pipe()
+        return self.count_inside_pipe()
 
 def main(argv):
     maze = Maze(argv[0])
     ans = maze.part2()
     print(ans)
+
 
 if __name__ == '__main__':
     main(sys.argv[1:])
